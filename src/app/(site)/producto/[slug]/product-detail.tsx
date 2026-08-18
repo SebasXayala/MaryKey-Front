@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { toDisplayMessage } from "@/lib/api/api-error";
+import { useAuthGate } from "@/lib/auth/auth-gate";
 import { useCart } from "@/lib/cart/cart-context";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils/cn";
@@ -16,6 +17,7 @@ import { catalogService } from "@/services/catalog.service";
 
 export function ProductDetail({ slug }: { slug: string }) {
   const { add, lastAddedId } = useCart();
+  const { requireAuth } = useAuthGate();
   const wishlist = useWishlist();
 
   const { data, isPending, isError, error } = useQuery({
@@ -91,7 +93,7 @@ export function ProductDetail({ slug }: { slug: string }) {
           <Button
             size="lg"
             disabled={!data.inStock}
-            onClick={() => add(data)}
+            onClick={() => requireAuth(() => add(data))}
           >
             {lastAddedId === data.id ? (
               <Check className="size-4" />

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { useAuthGate } from "@/lib/auth/auth-gate";
 import { useCart } from "@/lib/cart/cart-context";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/format";
@@ -31,6 +32,7 @@ export function ProductCard({
   className?: string;
 }) {
   const { add, lastAddedId } = useCart();
+  const { requireAuth } = useAuthGate();
   const wishlist = useWishlist();
 
   const isWished = wishlist.has(product.id);
@@ -114,7 +116,7 @@ export function ProductCard({
           fullWidth
           className="mt-4"
           disabled={!product.inStock}
-          onClick={() => add(product)}
+          onClick={() => requireAuth(() => add(product))}
         >
           {!product.inStock ? (
             "Agotado"
