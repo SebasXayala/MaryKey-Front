@@ -1,14 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Menu, Search, ShoppingBag, User, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { AccountMenu } from "@/components/layout/account-menu";
+import { CartMenu } from "@/components/layout/cart-menu";
 import { Logo } from "@/components/ui/logo";
-import { useAuth } from "@/lib/auth/auth-context";
-import { useCart } from "@/lib/cart/cart-context";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils/cn";
 import { catalogService } from "@/services/catalog.service";
@@ -27,8 +27,6 @@ const CONTENT_LINKS = [{ id: "tutoriales", href: "/tutoriales", name: "Tutoriale
 export function SiteHeader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
-  const { count } = useCart();
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -97,26 +95,8 @@ export function SiteHeader() {
         </form>
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          <Link
-            href={isAuthenticated ? "/cuenta" : "/login"}
-            aria-label={isAuthenticated ? "Mi cuenta" : "Iniciar sesión"}
-            className="rounded-full p-2.5 text-primary-500 transition-colors hover:bg-primary-50"
-          >
-            <User className="size-5" />
-          </Link>
-
-          <Link
-            href="/carrito"
-            aria-label={`Bolsa de compras (${count} productos)`}
-            className="relative rounded-full p-2.5 text-primary-500 transition-colors hover:bg-primary-50"
-          >
-            <ShoppingBag className="size-5" />
-            {count > 0 && (
-              <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary-500 text-[0.6rem] font-bold text-white">
-                {count}
-              </span>
-            )}
-          </Link>
+          <AccountMenu />
+          <CartMenu />
 
           <button
             type="button"
