@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useCart } from "@/lib/cart/cart-context";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils/cn";
 import { catalogService } from "@/services/catalog.service";
@@ -27,6 +28,7 @@ export function SiteHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
+  const { count } = useCart();
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -105,10 +107,15 @@ export function SiteHeader() {
 
           <Link
             href="/carrito"
-            aria-label="Bolsa de compras"
-            className="rounded-full p-2.5 text-primary-500 transition-colors hover:bg-primary-50"
+            aria-label={`Bolsa de compras (${count} productos)`}
+            className="relative rounded-full p-2.5 text-primary-500 transition-colors hover:bg-primary-50"
           >
             <ShoppingBag className="size-5" />
+            {count > 0 && (
+              <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary-500 text-[0.6rem] font-bold text-white">
+                {count}
+              </span>
+            )}
           </Link>
 
           <button
