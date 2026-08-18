@@ -177,6 +177,17 @@ function handleRegister(payload: RegisterPayload): AuthSession {
   };
 }
 
+/** Parámetros que no son atributos de producto. */
+const RESERVED_PARAMS = new Set([
+  "category",
+  "search",
+  "maxPrice",
+  "featured",
+  "page",
+  "pageSize",
+  "sort",
+]);
+
 function handleProducts(query: MockQuery): Paginated<Product> {
   const search = text(query.search)?.toLowerCase();
   let items = [...products];
@@ -184,14 +195,14 @@ function handleProducts(query: MockQuery): Paginated<Product> {
   if (query.category) {
     items = items.filter((item) => item.categorySlug === query.category);
   }
-  if (query.treatment) {
-    items = items.filter((item) => item.treatment === query.treatment);
+
+  // Filtros dinámicos: cualquier otro parámetro se compara con los
+  // atributos del producto (acabado, familia, tipoPiel, …).
+  for (const [key, value] of Object.entries(query)) {
+    if (RESERVED_PARAMS.has(key) || !value) continue;
+    items = items.filter((item) => item.attributes?.[key] === String(value));
   }
-  if (query.skinType) {
-    items = items.filter((item) =>
-      item.skinTypes?.includes(String(query.skinType)),
-    );
-  }
+
   if (query.maxPrice) {
     items = items.filter((item) => item.price <= Number(query.maxPrice));
   }

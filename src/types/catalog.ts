@@ -1,12 +1,37 @@
+export interface FilterOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Grupo de filtros de la barra lateral.
+ * Cada categoría define los suyos (Maquillaje no filtra por tipo de piel),
+ * así que los entrega el backend junto con la categoría.
+ */
+export interface FilterGroup {
+  /** Nombre del parámetro que se envía al backend, ej. "acabado". */
+  key: string;
+  label: string;
+  options: FilterOption[];
+}
+
+export interface PriceRange {
+  min: number;
+  max: number;
+}
+
 export interface Category {
   id: string;
   slug: string;
   name: string;
   description?: string;
-  /** Contenido del banner superior de la categoría (lo define el backend). */
+  /** Contenido del banner superior de la categoría. */
   heroTitle?: string;
   heroSubtitle?: string;
   heroImageUrl?: string | null;
+  /** Filtros disponibles para esta categoría. */
+  filters?: FilterGroup[];
+  priceRange?: PriceRange;
 }
 
 export type ProductBadge = "nuevo" | "best_seller" | "oferta";
@@ -25,9 +50,8 @@ export interface Product {
   /** Nombre de la línea a la que pertenece, ej. "Cuidado de la piel". */
   lineName?: string;
   badge?: ProductBadge | null;
-  /** Filtros de la barra lateral. */
-  treatment?: string | null;
-  skinTypes?: string[];
+  /** Valores por los que filtra la barra lateral: { acabado: "mate" }. */
+  attributes?: Record<string, string>;
   rating?: number;
   isFeatured?: boolean;
   inStock: boolean;
@@ -38,29 +62,14 @@ export type ProductSort = "relevance" | "price_asc" | "price_desc" | "newest";
 export interface ProductQuery {
   category?: string;
   search?: string;
-  treatment?: string;
-  skinType?: string;
+  /** Filtros dinámicos; cada clave viaja como query param. */
+  attributes?: Record<string, string>;
   maxPrice?: number;
   featured?: boolean;
   page?: number;
   pageSize?: number;
   sort?: ProductSort;
 }
-
-/** Opciones de la barra de filtros; el backend las puede servir por categoría. */
-export const TREATMENT_OPTIONS = [
-  { value: "", label: "Todos" },
-  { value: "serums", label: "Sérums" },
-  { value: "cremas", label: "Cremas" },
-  { value: "limpieza", label: "Limpieza" },
-] as const;
-
-export const SKIN_TYPE_OPTIONS = [
-  { value: "", label: "Todas" },
-  { value: "seca", label: "Seca" },
-  { value: "mixta", label: "Mixta" },
-  { value: "grasa", label: "Grasa" },
-] as const;
 
 export const SORT_OPTIONS: { value: ProductSort; label: string }[] = [
   { value: "newest", label: "Más recientes" },

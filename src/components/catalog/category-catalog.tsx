@@ -2,14 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { PackageSearch, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  CatalogFilters,
-  emptyFilters,
-  MAX_PRICE_LIMIT,
-  type CatalogFiltersValue,
-} from "@/components/catalog/catalog-filters";
+import { CatalogFilters } from "@/components/catalog/catalog-filters";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductCard } from "@/components/catalog/product-card";
 import { Alert } from "@/components/ui/alert";
@@ -17,25 +12,50 @@ import { Button } from "@/components/ui/button";
 import { toDisplayMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
 import { catalogService } from "@/services/catalog.service";
-import { SORT_OPTIONS, type ProductSort } from "@/types/catalog";
+import { SORT_OPTIONS, type PriceRange, type ProductSort } from "@/types/catalog";
 
 const PAGE_SIZE = 6;
+const DEFAULT_PRICE_RANGE: PriceRange = { min: 0, max: 500000 };
 
 /**
  * Vista de categoría: filtros + orden + grilla + paginación.
- * Todo el estado vive aquí y se traduce a una sola consulta al backend.
+ *
+ * Los filtros no están quemados: cada categoría declara los suyos en el
+ * backend, así que Maquillaje filtra por zona y acabado, y Fragancias por
+ * familia olfativa y concentración.
  */
 export function CategoryCatalog({ category }: { category: string }) {
-  const [filters, setFilters] = useState<CatalogFiltersValue>(emptyFilters);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [sort, setSort] = useState<ProductSort>("newest");
   const [page, setPage] = useState(1);
   const [showFiltersOnMobile, setShowFiltersOnMobile] = useState(false);
 
+  const { data: categoryData, isPending: isCategoryPending } = useQuery({
+    queryKey: queryKeys.category(category),
+    queryFn: () => catalogService.category(category),
+    retry: false,
+  });
+
+  const priceRange = categoryData?.priceRange ?? DEFAULT_PRICE_RANGE;
+  const filterGroups = categoryData?.filters ?? [];
+
+  // Al cambiar de categoría, los filtros anteriores dejan de aplicar.
+  useEffect(() => {
+    setValues({});
+    setMaxPrice(null);
+    setPage(1);
+  }, [category]);
+
+  const activeAttributes = Object.fromEntries(
+    Object.entries(values).filter(([, value]) => Boolean(value)),
+  );
+
   const query = {
     category,
-    treatment: filters.treatment || undefined,
-    skinType: filters.skinType || undefined,
-    maxPrice: filters.maxPrice < MAX_PRICE_LIMIT ? filters.maxPrice : undefined,
+    attributes: activeAttributes,
+    maxPrice:
+      maxPrice !== null && maxPrice < priceRange.max ? maxPrice : undefined,
     sort,
     page,
     pageSize: PAGE_SIZE,
@@ -46,8 +66,14 @@ export function CategoryCatalog({ category }: { category: string }) {
     queryFn: () => catalogService.products(query),
   });
 
-  function updateFilters(next: CatalogFiltersValue) {
-    setFilters(next);
+  function updateValues(next: Record<string, string>) {
+    setValues(next);
+    setPage(1);
+  }
+
+  function resetFilters() {
+    setValues({});
+    setMaxPrice(null);
     setPage(1);
   }
 
@@ -66,8 +92,17 @@ export function CategoryCatalog({ category }: { category: string }) {
         </Button>
 
         <CatalogFilters
-          value={filters}
-          onChange={updateFilters}
+          groups={filterGroups}
+          priceRange={priceRange}
+          values={values}
+          maxPrice={maxPrice ?? priceRange.max}
+          onChange={updateValues}
+          onMaxPriceChange={(value) => {
+            setMaxPrice(value);
+            setPage(1);
+          }}
+          onReset={resetFilters}
+          isLoading={isCategoryPending}
           className={showFiltersOnMobile ? "mt-6" : "mt-6 hidden lg:block"}
         />
       </div>
@@ -142,7 +177,7 @@ export function CategoryCatalog({ category }: { category: string }) {
             <p className="text-sm text-neutral-500">
               No hay productos con estos filtros.
             </p>
-            <Button variant="secondary" size="sm" onClick={() => updateFilters(emptyFilters)}>
+            <Button variant="secondary" size="sm" onClick={resetFilters}>
               Limpiar filtros
             </Button>
           </div>

@@ -4,37 +4,50 @@ import { SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/format";
-import { SKIN_TYPE_OPTIONS, TREATMENT_OPTIONS } from "@/types/catalog";
-
-export interface CatalogFiltersValue {
-  treatment: string;
-  skinType: string;
-  maxPrice: number;
-}
-
-export const MAX_PRICE_LIMIT = 150;
-
-export const emptyFilters: CatalogFiltersValue = {
-  treatment: "",
-  skinType: "",
-  maxPrice: MAX_PRICE_LIMIT,
-};
+import type { FilterGroup, PriceRange } from "@/types/catalog";
 
 interface CatalogFiltersProps {
-  value: CatalogFiltersValue;
-  onChange: (value: CatalogFiltersValue) => void;
+  /** Grupos que definió la categoría en el backend. */
+  groups: FilterGroup[];
+  priceRange: PriceRange;
+  /** Selección actual: { acabado: "mate" }. */
+  values: Record<string, string>;
+  maxPrice: number;
+  onChange: (values: Record<string, string>) => void;
+  onMaxPriceChange: (maxPrice: number) => void;
+  onReset: () => void;
+  isLoading?: boolean;
   className?: string;
 }
 
 export function CatalogFilters({
-  value,
+  groups,
+  priceRange,
+  values,
+  maxPrice,
   onChange,
+  onMaxPriceChange,
+  onReset,
+  isLoading = false,
   className,
 }: CatalogFiltersProps) {
   const isDirty =
-    value.treatment !== "" ||
-    value.skinType !== "" ||
-    value.maxPrice !== MAX_PRICE_LIMIT;
+    Object.values(values).some(Boolean) || maxPrice !== priceRange.max;
+
+  if (isLoading) {
+    return (
+      <aside className={cn("w-full animate-pulse space-y-6", className)}>
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="space-y-2.5">
+            <div className="h-3 w-24 rounded bg-neutral-100" />
+            <div className="h-3 w-20 rounded bg-neutral-100" />
+            <div className="h-3 w-16 rounded bg-neutral-100" />
+            <div className="h-3 w-20 rounded bg-neutral-100" />
+          </div>
+        ))}
+      </aside>
+    );
+  }
 
   return (
     <aside className={cn("w-full", className)}>
@@ -47,7 +60,7 @@ export function CatalogFilters({
         {isDirty && (
           <button
             type="button"
-            onClick={() => onChange(emptyFilters)}
+            onClick={onReset}
             className="text-[0.7rem] font-semibold text-primary-600 hover:text-primary-700"
           >
             Limpiar
@@ -55,21 +68,34 @@ export function CatalogFilters({
         )}
       </div>
 
-      <FilterGroup
-        legend="Tratamiento"
-        name="treatment"
-        options={TREATMENT_OPTIONS}
-        selected={value.treatment}
-        onSelect={(treatment) => onChange({ ...value, treatment })}
-      />
+      {groups.map((group) => (
+        <fieldset key={group.key} className="mt-7 first:mt-0">
+          <legend className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-neutral-500">
+            {group.label}
+          </legend>
 
-      <FilterGroup
-        legend="Tipo de piel"
-        name="skinType"
-        options={SKIN_TYPE_OPTIONS}
-        selected={value.skinType}
-        onSelect={(skinType) => onChange({ ...value, skinType })}
-      />
+          <div className="mt-3 space-y-2.5">
+            {group.options.map((option) => (
+              <label
+                key={`${group.key}-${option.value || "all"}`}
+                className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-600 hover:text-neutral-800"
+              >
+                <input
+                  type="radio"
+                  name={group.key}
+                  value={option.value}
+                  checked={(values[group.key] ?? "") === option.value}
+                  onChange={() =>
+                    onChange({ ...values, [group.key]: option.value })
+                  }
+                  className="size-3.5 accent-primary-500"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
 
       <fieldset className="mt-7">
         <legend className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-neutral-500">
@@ -78,65 +104,22 @@ export function CatalogFilters({
 
         <input
           type="range"
-          min={10}
-          max={MAX_PRICE_LIMIT}
-          step={5}
-          value={value.maxPrice}
-          onChange={(event) =>
-            onChange({ ...value, maxPrice: Number(event.target.value) })
-          }
+          min={priceRange.min}
+          max={priceRange.max}
+          step={Math.max(1000, Math.round((priceRange.max - priceRange.min) / 20))}
+          value={maxPrice}
+          onChange={(event) => onMaxPriceChange(Number(event.target.value))}
           aria-label="Precio máximo"
           className="mt-4 w-full accent-primary-500"
         />
 
         <div className="mt-1 flex justify-between text-[0.7rem] text-neutral-400">
-          <span>{formatPrice(10)}</span>
+          <span>{formatPrice(priceRange.min)}</span>
           <span className="font-semibold text-neutral-600">
-            Hasta {formatPrice(value.maxPrice)}
+            Hasta {formatPrice(maxPrice)}
           </span>
         </div>
       </fieldset>
     </aside>
-  );
-}
-
-function FilterGroup({
-  legend,
-  name,
-  options,
-  selected,
-  onSelect,
-}: {
-  legend: string;
-  name: string;
-  options: readonly { value: string; label: string }[];
-  selected: string;
-  onSelect: (value: string) => void;
-}) {
-  return (
-    <fieldset className="mt-7 first:mt-0">
-      <legend className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-neutral-500">
-        {legend}
-      </legend>
-
-      <div className="mt-3 space-y-2.5">
-        {options.map((option) => (
-          <label
-            key={option.value || "all"}
-            className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-600 hover:text-neutral-800"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={selected === option.value}
-              onChange={() => onSelect(option.value)}
-              className="size-3.5 accent-primary-500"
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }

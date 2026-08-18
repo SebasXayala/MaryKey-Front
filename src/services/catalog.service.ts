@@ -18,13 +18,13 @@ export const catalogService = {
       query: {
         category: query.category,
         search: query.search,
-        treatment: query.treatment,
-        skinType: query.skinType,
         maxPrice: query.maxPrice,
         featured: query.featured,
         page: query.page ?? 1,
         pageSize: query.pageSize ?? 12,
         sort: query.sort,
+        // Los filtros de la categoría viajan como parámetros sueltos.
+        ...query.attributes,
       },
     });
   },
