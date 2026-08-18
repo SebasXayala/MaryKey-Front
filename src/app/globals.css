@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@theme {
+  /* ---------- Tipografía ---------- */
+  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-montserrat), "Montserrat", system-ui, sans-serif;
+
+  /* ---------- Primary  #E76AAA ---------- */
+  --color-primary-50: #fdf2f7;
+  --color-primary-100: #fce7f0;
+  --color-primary-200: #f9cfe1;
+  --color-primary-300: #f4aecb;
+  --color-primary-400: #ee8bb5;
+  --color-primary-500: #e76aaa;
+  --color-primary-600: #d4498e;
+  --color-primary-700: #b33670;
+  --color-primary-800: #8f2d5b;
+  --color-primary-900: #74274c;
+
+  /* ---------- Secondary (vino) ---------- */
+  --color-secondary-50: #faf5f7;
+  --color-secondary-100: #f3e9ee;
+  --color-secondary-200: #e6d2dc;
+  --color-secondary-300: #d2b1c1;
+  --color-secondary-400: #b0879a;
+  --color-secondary-500: #8b5e71;
+  --color-secondary-600: #7a5063;
+  --color-secondary-700: #654253;
+  --color-secondary-800: #4f3441;
+  --color-secondary-900: #3b262f;
+
+  /* ---------- Dorado (acentos editoriales) ---------- */
+  --color-gold-200: #efe0c8;
+  --color-gold-400: #d9b781;
+  --color-gold-600: #b8935c;
+
+  /* ---------- Neutral  #333333 ---------- */
+  --color-neutral-50: #f7f7f7;
+  --color-neutral-100: #ededed;
+  --color-neutral-200: #dcdcdc;
+  --color-neutral-300: #bdbdbd;
+  --color-neutral-400: #8f8f8f;
+  --color-neutral-500: #666666;
+  --color-neutral-600: #4d4d4d;
+  --color-neutral-700: #333333;
+  --color-neutral-800: #242424;
+  --color-neutral-900: #141414;
+
+  /* ---------- Tertiary / superficies  #F9F9F9 ---------- */
+  --color-tertiary: #f9f9f9;
+
+  /* ---------- Semánticos ---------- */
+  --color-background: #ffffff;
+  --color-surface: #f9f9f9;
+  --color-foreground: #333333;
+  --color-muted: #8f8f8f;
+  --color-line: #ededed;
+  --color-danger: #c0392b;
+  --color-success: #2e7d5b;
+
+  /* ---------- Radios ---------- */
+  --radius-field: 0.75rem;
+  --radius-card: 1.25rem;
+
+  /* ---------- Sombras ---------- */
+  --shadow-card: 0 1px 2px rgb(51 51 51 / 0.04), 0 8px 24px rgb(51 51 51 / 0.06);
+  --shadow-field: 0 1px 2px rgb(51 51 51 / 0.04);
+}
+
+/* ==================================================================
+   Base
+   ================================================================== */
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+}
+
+/* ==================================================================
+   Utilidades del sistema
+   ================================================================== */
+@utility label-field {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-neutral-700);
+}
+
+@utility wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
