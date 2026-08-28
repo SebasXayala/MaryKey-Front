@@ -17,6 +17,8 @@ export interface LoginPayload {
 export interface RegisterPayload {
   firstName: string;
   lastName: string;
+  /** El backend la exige (`@IsInt()` en su RegisterDto) para crear la cuenta. */
+  age: number;
   email: string;
   password: string;
   acceptsTerms: boolean;

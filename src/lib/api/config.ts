@@ -3,14 +3,25 @@
  * Todo se controla por variables de entorno (ver .env.example).
  */
 export const apiConfig = {
-  /** Ej: https://api.marykay.com/v1 — sin slash final. */
-  baseUrl: (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, ""),
+  /**
+   * Base de las peticiones, sin slash final.
+   *
+   * Hoy es una ruta relativa ("/api/backend") que el rewrite de
+   * `next.config.ts` reenvía al Nest: así el navegador ve mismo origen y
+   * no choca con la falta de CORS en el backend. También acepta una URL
+   * absoluta (ej. https://api.marykay.com/v1) el día que haya CORS.
+   */
+  baseUrl: (process.env.NEXT_PUBLIC_API_URL ?? "/api/backend").replace(
+    /\/+$/,
+    "",
+  ),
 
   timeoutMs: Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 15000),
 
   /**
-   * Datos simulados mientras no exista backend.
-   * Se apagan poniendo NEXT_PUBLIC_API_MOCKS=false (y definiendo la URL).
+   * Simula SOLO lo que el backend todavía no implementa (ver
+   * `backend-coverage.ts`): auth y usuarios ya salen al servidor real.
+   * Con NEXT_PUBLIC_API_MOCKS=false todo va al backend, sin excepciones.
    */
   useMocks:
     (process.env.NEXT_PUBLIC_API_MOCKS ?? "true").toLowerCase() === "true",

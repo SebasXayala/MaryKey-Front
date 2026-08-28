@@ -43,6 +43,31 @@ const DEFAULT_MESSAGES: Record<number, string> = {
 };
 
 /**
+ * Mensajes que el backend devuelve en inglés y sin código de negocio.
+ * Se traducen aquí para no mostrárselos crudos a la clienta; el día que el
+ * backend mande un `code`, este mapa deja de usarse solo.
+ */
+const BACKEND_MESSAGES: Record<
+  string,
+  { code: string; message: string; fieldErrors?: Record<string, string> }
+> = {
+  "Invalid credentials": {
+    code: "INVALID_CREDENTIALS",
+    message: "Correo o contraseña incorrectos.",
+  },
+  "User already exists": {
+    code: "EMAIL_ALREADY_EXISTS",
+    message: "Ya existe una cuenta con este correo.",
+    fieldErrors: { email: "Este correo ya está registrado." },
+  },
+  "Email already exists": {
+    code: "EMAIL_ALREADY_EXISTS",
+    message: "Ya existe una cuenta con este correo.",
+    fieldErrors: { email: "Este correo ya está registrado." },
+  },
+};
+
+/**
  * Traduce el cuerpo de error del backend a nuestra forma normalizada.
  * Soporta las convenciones más frecuentes; ajusta aquí cuando llegue
  * el contrato real.
@@ -51,8 +76,16 @@ export function normalizeError(status: number, body: unknown): ApiError {
   const raw = (body ?? {}) as Record<string, unknown>;
   const nested = (raw.error ?? {}) as Record<string, unknown>;
 
+  // Nest con ValidationPipe responde { message: ["email must be an email", …] }.
+  const validation = parseNestValidation(raw.message);
+  const known = pickString(raw.message)
+    ? BACKEND_MESSAGES[pickString(raw.message) as string]
+    : undefined;
+
   const message =
+    known?.message ??
     pickString(raw.message) ??
+    validation?.message ??
     pickString(nested.message) ??
     pickString(raw.detail) ??
     DEFAULT_MESSAGES[status] ??
@@ -61,14 +94,45 @@ export function normalizeError(status: number, body: unknown): ApiError {
   const code =
     pickString(raw.code) ??
     pickString(nested.code) ??
+    known?.code ??
+    (validation ? "VALIDATION_ERROR" : undefined) ??
     (status === 0 ? "NETWORK_ERROR" : `HTTP_${status}`);
 
   return new ApiError({
     status,
     code,
     message,
-    fieldErrors: parseFieldErrors(raw.errors ?? raw.fieldErrors ?? nested.errors),
+    fieldErrors:
+      parseFieldErrors(raw.errors ?? raw.fieldErrors ?? nested.errors) ??
+      validation?.fieldErrors ??
+      known?.fieldErrors,
   });
+}
+
+/**
+ * Convierte el array de class-validator en errores por campo.
+ * Cada mensaje empieza por el nombre de la propiedad ("age must be an
+ * integer number"), así que la primera palabra basta para ubicarlo.
+ */
+function parseNestValidation(
+  value: unknown,
+): { message: string; fieldErrors: Record<string, string> } | undefined {
+  if (!Array.isArray(value) || !value.length) return undefined;
+
+  const messages = value.filter(
+    (item): item is string => typeof item === "string" && Boolean(item.trim()),
+  );
+  if (!messages.length) return undefined;
+
+  const fieldErrors: Record<string, string> = {};
+  for (const item of messages) {
+    const field = item.split(" ")[0];
+    // "property firstName should not exist" -> el campo es la 2ª palabra.
+    const key = field === "property" ? item.split(" ")[1] : field;
+    if (key && !fieldErrors[key]) fieldErrors[key] = item;
+  }
+
+  return { message: messages[0], fieldErrors };
 }
 
 function pickString(value: unknown): string | undefined {

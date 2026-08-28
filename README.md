@@ -2,11 +2,6 @@
 
 Next.js 15 (App Router) + TypeScript + Tailwind CSS v4 + React Query.
 
-La aplicación **no es un mockup**: toda la UI consume servicios reales a través
-de una única capa HTTP. Mientras el backend no exista, esa capa responde con un
-backend simulado en memoria que implementa el mismo contrato. Conectar el API
-real es cambiar dos variables de entorno.
-
 ---
 
 ## Arrancar
@@ -19,28 +14,74 @@ npm run dev
 
 http://localhost:3000
 
-**Credenciales de prueba (modo sin backend):**
-`demo@marykay.com` / `MaryKay2024`
+Requiere el backend (repo `MaryKey-Back`, **rama `dev`**) corriendo en el
+puerto 4000. Si usa otro puerto, cámbialo en `BACKEND_URL` de `.env.local`.
+
+**Credenciales de prueba:** `demo@marykay.com` / `MaryKay2024`
+(usuario real de la base de datos, no simulado).
 
 ---
 
-## Conectar el backend real
+## Estado de la conexión con el backend
 
-1. En `.env.local`:
+El backend va adelantado en autenticación y usuarios, pero todavía no tiene
+catálogo, tutoriales ni newsletter. En vez de apagar los mocks de golpe —lo que
+dejaría media tienda en 404— **cada ruta se decide por separado** en
+[`src/lib/api/backend-coverage.ts`](src/lib/api/backend-coverage.ts):
 
-   ```env
-   NEXT_PUBLIC_API_URL=https://api.tu-backend.com/v1
-   NEXT_PUBLIC_API_MOCKS=false
-   ```
+| Zona | Origen | Endpoints |
+| --- | --- | --- |
+| Login y registro | **Backend real** | `POST /auth/login`, `POST /auth/register` |
+| Perfil de la cuenta | **Backend real** | `GET /users`, `GET /users/:id`, `GET /roles` |
+| Catálogo, tutoriales, newsletter | Simulado | pendientes en el API |
+| Recuperar contraseña | Simulado | pendiente en el API |
 
-2. Ajusta las rutas en [`src/lib/api/endpoints.ts`](src/lib/api/endpoints.ts)
-   para que coincidan con la documentación del API.
+Para conectar un endpoint nuevo basta agregar su prefijo a
+`backend-coverage.ts`; los servicios y la UI no cambian.
 
-3. Ajusta los tipos en [`src/types/`](src/types/) si los nombres de campos
-   difieren (`firstName` vs `nombre`, etc.).
+### Cómo se salva la diferencia de contratos
 
-4. Borra `src/lib/api/mock/` y la rama de mocks en `http.ts` cuando ya no la
-   necesites.
+El modelo del backend y el de la tienda no coinciden. La traducción está
+aislada en [`src/services/backend-user.ts`](src/services/backend-user.ts) y
+[`src/services/auth.service.ts`](src/services/auth.service.ts):
+
+- El backend guarda `username` (un solo campo, máx. 30) y la UI usa
+  `firstName` / `lastName`: se unen al registrar y se parten al leer.
+- El registro exige `age` y `role_id`. La edad se pide en el formulario; el
+  `role_id` se resuelve consultando `GET /roles`, no con un id quemado.
+- `POST /auth/login` devuelve `{ access_token, Email }` sin datos del usuario y
+  no existe `/auth/me`: el perfil se completa buscando el correo en
+  `GET /users`, y `me()` relee por id con `GET /users/:id`.
+- El registro no devuelve token, así que encadena un login automático.
+- Los mensajes del backend vienen en inglés (`"Invalid credentials"`); se
+  traducen en [`src/lib/api/api-error.ts`](src/lib/api/api-error.ts), junto con
+  los arreglos de `class-validator`, que se reparten por campo del formulario.
+
+### Sin CORS: proxy en Next
+
+El backend no llama a `app.enableCors()`, así que el navegador bloquearía
+cualquier llamada directa (el preflight `OPTIONS` responde 404).
+`next.config.ts` define un rewrite `/api/backend/*` → `$BACKEND_URL/api/v1/*`:
+las peticiones salen desde el servidor de Next y el navegador las ve como mismo
+origen. Cuando el backend habilite CORS se borra el rewrite y se pone la URL
+absoluta en `NEXT_PUBLIC_API_URL`.
+
+### Pendientes que dependen del backend
+
+- **El token expira a los 60 segundos** (`expiresIn: '60s'`) y no existe
+  `/auth/refresh`. Por eso el front ignora ese valor al guardar la cookie. Hoy
+  no molesta porque ningún endpoint está protegido, pero cuando lo estén habrá
+  que subir la expiración y exponer el refresh.
+- `GET /users` no carga la relación `role`, así que todas las cuentas se
+  muestran como "Clienta".
+- `GET /users` y `GET /users/:id` no exigen autenticación.
+- No existen `/auth/logout` ni `/auth/forgot-password`: el logout es local y la
+  recuperación de contraseña sigue simulada.
+
+### Cuando el backend esté completo
+
+1. Pon `NEXT_PUBLIC_API_MOCKS=false` en `.env.local`.
+2. Borra `src/lib/api/mock/` y la rama de mocks en `http.ts`.
 
 Nada más cambia: componentes, formularios y pantallas no conocen ninguna URL.
 
@@ -48,9 +89,9 @@ Nada más cambia: componentes, formularios y pantallas no conocen ninguna URL.
 
 - Respuesta plana `{...}` **o** envuelta `{ "data": {...} }`.
 - Errores `{ "message": "...", "code": "...", "errors": { "email": "..." } }`
-  (también acepta `errors.email` como arreglo y `error.message` anidado).
-- `401` → intenta refrescar con el refresh token una sola vez; si falla, cierra
-  sesión y redirige al login.
+  (también acepta `errors.email` como arreglo, `error.message` anidado y el
+  `message: [...]` que genera el `ValidationPipe` de Nest).
+- `401` → cierra sesión y redirige al login (no hay refresh token que usar).
 - Timeout configurable (`NEXT_PUBLIC_API_TIMEOUT`) y errores de red
   normalizados con mensajes en español.
 

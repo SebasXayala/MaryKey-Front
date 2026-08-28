@@ -39,6 +39,7 @@ export function RegisterForm() {
       await registerUser({
         firstName: values.firstName,
         lastName: values.lastName,
+        age: values.age,
         email: values.email,
         password: values.password,
         acceptsTerms: values.acceptsTerms,
@@ -85,6 +86,18 @@ export function RegisterForm() {
             {...register("lastName")}
           />
         </div>
+
+        <Input
+          label="Edad"
+          type="number"
+          inputMode="numeric"
+          min={18}
+          max={120}
+          autoComplete="off"
+          placeholder="28"
+          error={errors.age?.message}
+          {...register("age")}
+        />
 
         <Input
           label="Correo Electrónico"

@@ -1,6 +1,6 @@
 import { ApiError, normalizeError } from "@/lib/api/api-error";
+import { isImplementedByBackend } from "@/lib/api/backend-coverage";
 import { apiConfig } from "@/lib/api/config";
-import { endpoints } from "@/lib/api/endpoints";
 import { mockRequest } from "@/lib/api/mock/mock-server";
 import { sessionStore } from "@/lib/auth/session-store";
 import type { ApiEnvelope } from "@/types/api";
@@ -78,8 +78,14 @@ export async function request<T>(
 ): Promise<T> {
   const { method = "GET", body, query, headers = {}, auth = true } = options;
 
-  // Modo sin backend: mismos tipos, mismas firmas, datos simulados.
-  if (apiConfig.useMocks) {
+  /**
+   * Ruteo mixto mientras el backend se completa: lo que ya existe sale al
+   * servidor real y lo que falta lo responde el simulador, con los mismos
+   * tipos y las mismas firmas. Con NEXT_PUBLIC_API_MOCKS=false todo va real
+   * (y lo no implementado devuelve 404, que es justamente lo que se quiere
+   * ver al validar el avance del backend).
+   */
+  if (apiConfig.useMocks && !isImplementedByBackend(path)) {
     return mockRequest<T>(path, { method, body, query });
   }
 
@@ -156,39 +162,18 @@ export async function request<T>(
   return unwrap<T>(payload);
 }
 
-let refreshInFlight: Promise<boolean> | null = null;
-
-/** Un solo refresh a la vez aunque fallen varias peticiones en paralelo. */
+/**
+ * Renovación de sesión.
+ *
+ * El backend no expone `/auth/refresh` ni emite refresh tokens, así que no
+ * hay nada que renovar: ante un 401 se cierra la sesión y se vuelve al
+ * login. Se corta aquí para no gastar un viaje al servidor que responde 404.
+ *
+ * Cuando el backend agregue el endpoint, se restaura la llamada a
+ * `endpoints.auth.refresh` y se suma la ruta a `backend-coverage.ts`.
+ */
 async function tryRefreshSession(): Promise<boolean> {
-  const refreshToken = sessionStore.getRefreshToken();
-  if (!refreshToken) return false;
-
-  refreshInFlight ??= (async () => {
-    try {
-      const session = await request<{
-        accessToken: string;
-        refreshToken?: string;
-        expiresIn?: number;
-      }>(endpoints.auth.refresh, {
-        method: "POST",
-        body: { refreshToken },
-        auth: false,
-        _retried: true,
-      });
-
-      const user = sessionStore.getUser();
-      if (!user) return false;
-
-      sessionStore.save({ ...session, user });
-      return true;
-    } catch {
-      return false;
-    } finally {
-      refreshInFlight = null;
-    }
-  })();
-
-  return refreshInFlight;
+  return false;
 }
 
 export const http = {
