@@ -55,6 +55,8 @@ export interface Product {
   rating?: number;
   isFeatured?: boolean;
   inStock: boolean;
+  /** Fecha de alta en el backend; ordena "Más recientes". */
+  createdAt?: string;
 }
 
 export type ProductSort = "relevance" | "price_asc" | "price_desc" | "newest";

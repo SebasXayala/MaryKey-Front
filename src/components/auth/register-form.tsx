@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
+import { Select } from "@/components/ui/select";
 import { ApiError, toDisplayMessage } from "@/lib/api/api-error";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -40,6 +41,7 @@ export function RegisterForm() {
         firstName: values.firstName,
         lastName: values.lastName,
         age: values.age,
+        gender: values.gender,
         email: values.email,
         password: values.password,
         acceptsTerms: values.acceptsTerms,
@@ -87,17 +89,30 @@ export function RegisterForm() {
           />
         </div>
 
-        <Input
-          label="Edad"
-          type="number"
-          inputMode="numeric"
-          min={18}
-          max={120}
-          autoComplete="off"
-          placeholder="28"
-          error={errors.age?.message}
-          {...register("age")}
-        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Input
+            label="Edad"
+            type="number"
+            inputMode="numeric"
+            min={18}
+            max={120}
+            autoComplete="off"
+            placeholder="28"
+            error={errors.age?.message}
+            {...register("age")}
+          />
+          {/* El backend lo exige como enum ('female' | 'male'). */}
+          <Select
+            label="Género"
+            placeholder="Selecciona…"
+            options={[
+              { value: "female", label: "Femenino" },
+              { value: "male", label: "Masculino" },
+            ]}
+            error={errors.gender?.message}
+            {...register("gender")}
+          />
+        </div>
 
         <Input
           label="Correo Electrónico"

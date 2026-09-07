@@ -16,6 +16,14 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Adjunta el Authorization header. Por defecto `true`. */
   auth?: boolean;
+  /**
+   * No cerrar la sesión si el servidor responde 401.
+   *
+   * Sirve para lo que la tienda pide sin estar logueada (hoy el catálogo,
+   * que el backend dejó detrás del guard JWT): un visitante anónimo debe
+   * ver un catálogo vacío o el mock, no ser expulsado a /login.
+   */
+  silentUnauthorized?: boolean;
   signal?: AbortSignal;
   /** Reintento con refresh token ya usado (uso interno). */
   _retried?: boolean;
@@ -146,7 +154,12 @@ export async function request<T>(
 
   if (!response.ok) {
     // Access token vencido: se intenta refrescar una sola vez.
-    if (response.status === 401 && auth && !options._retried) {
+    if (
+      response.status === 401 &&
+      auth &&
+      !options._retried &&
+      !options.silentUnauthorized
+    ) {
       const refreshed = await tryRefreshSession();
       if (refreshed) {
         return request<T>(path, { ...options, _retried: true });

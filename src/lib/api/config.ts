@@ -20,7 +20,9 @@ export const apiConfig = {
 
   /**
    * Simula SOLO lo que el backend todavía no implementa (ver
-   * `backend-coverage.ts`): auth y usuarios ya salen al servidor real.
+   * `backend-coverage.ts`): auth, usuarios, roles y catálogo ya salen al
+   * servidor real. También sirve de red de seguridad para el catálogo
+   * mientras `/categories` y `/products` sigan detrás del guard JWT.
    * Con NEXT_PUBLIC_API_MOCKS=false todo va al backend, sin excepciones.
    */
   useMocks:

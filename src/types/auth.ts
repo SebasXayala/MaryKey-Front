@@ -1,8 +1,13 @@
+/** El backend solo acepta estos dos valores (@IsEnum del DTO). */
+export type Gender = "female" | "male";
+
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  /** El backend lo exige al crear la cuenta. */
+  gender?: Gender | null;
   avatarUrl?: string | null;
   /** Cliente final o consultora de belleza. */
   role: "customer" | "consultant" | "admin";
@@ -19,6 +24,8 @@ export interface RegisterPayload {
   lastName: string;
   /** El backend la exige (`@IsInt()` en su RegisterDto) para crear la cuenta. */
   age: number;
+  /** También obligatorio en el RegisterDto del backend. */
+  gender: Gender;
   email: string;
   password: string;
   acceptsTerms: boolean;

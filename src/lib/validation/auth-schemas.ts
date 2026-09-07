@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { USERNAME_MAX_LENGTH } from "@/services/backend-user";
+import { NAME_MAX_LENGTH } from "@/services/backend-user";
 
 /**
  * Validación en cliente. El backend valida de nuevo: cuando devuelva
@@ -33,6 +33,13 @@ export const registerSchema = z
       .int("La edad debe ser un número entero.")
       .min(18, "Debes ser mayor de edad para crear una cuenta.")
       .max(120, "Ingresa una edad válida."),
+    /**
+     * El backend la exige como enum ('female' | 'male'); sin ella el
+     * registro responde 400.
+     */
+    gender: z.enum(["female", "male"], {
+      errorMap: () => ({ message: "Selecciona una opción." }),
+    }),
     email: z
       .string()
       .min(1, "Ingresa tu correo.")
@@ -58,10 +65,10 @@ export const registerSchema = z
   .refine(
     (values) =>
       `${values.firstName.trim()} ${values.lastName.trim()}`.trim().length <=
-      USERNAME_MAX_LENGTH,
+      NAME_MAX_LENGTH,
     {
       path: ["lastName"],
-      message: `Nombre y apellido juntos no pueden superar ${USERNAME_MAX_LENGTH} caracteres.`,
+      message: `Nombre y apellido juntos no pueden superar ${NAME_MAX_LENGTH} caracteres.`,
     },
   );
 

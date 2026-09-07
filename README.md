@@ -8,11 +8,20 @@ Next.js 15 (App Router) + TypeScript + Tailwind CSS v4 + React Query.
 
 ```bash
 npm install
-cp .env.example .env.local   # en Windows: copy .env.example .env.local
 npm run dev
 ```
 
 http://localhost:3000
+
+Antes del primer arranque crea un `.env.local` en la raíz del proyecto:
+
+```env
+BACKEND_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=/api/backend
+NEXT_PUBLIC_API_TIMEOUT=15000
+NEXT_PUBLIC_API_MOCKS=true
+NEXT_PUBLIC_SESSION_COOKIE=mk_session
+```
 
 Requiere el backend (repo `MaryKey-Back`, **rama `dev`**) corriendo en el
 puerto 4000. Si usa otro puerto, cámbialo en `BACKEND_URL` de `.env.local`.
@@ -24,16 +33,19 @@ puerto 4000. Si usa otro puerto, cámbialo en `BACKEND_URL` de `.env.local`.
 
 ## Estado de la conexión con el backend
 
-El backend va adelantado en autenticación y usuarios, pero todavía no tiene
-catálogo, tutoriales ni newsletter. En vez de apagar los mocks de golpe —lo que
-dejaría media tienda en 404— **cada ruta se decide por separado** en
+El backend ya expone autenticación, usuarios, roles y catálogo (categorías y
+productos); siguen pendientes tutoriales, newsletter y recuperación de
+contraseña. En vez de apagar los mocks de golpe —lo que dejaría media tienda en
+404— **cada ruta se decide por separado** en
 [`src/lib/api/backend-coverage.ts`](src/lib/api/backend-coverage.ts):
 
 | Zona | Origen | Endpoints |
 | --- | --- | --- |
 | Login y registro | **Backend real** | `POST /auth/login`, `POST /auth/register` |
-| Perfil de la cuenta | **Backend real** | `GET /users`, `GET /users/:id`, `GET /roles` |
-| Catálogo, tutoriales, newsletter | Simulado | pendientes en el API |
+| Sesión | **Backend real** | `GET /auth/profile`, `POST /auth/logout` |
+| Perfil de la cuenta | **Backend real** | `GET /users/:id`, `GET /roles` |
+| Catálogo | **Backend real** | `GET /categories`, `GET /products`, `GET /products/:id` |
+| Tutoriales y newsletter | Simulado | pendientes en el API |
 | Recuperar contraseña | Simulado | pendiente en el API |
 
 Para conectar un endpoint nuevo basta agregar su prefijo a
@@ -42,17 +54,25 @@ Para conectar un endpoint nuevo basta agregar su prefijo a
 ### Cómo se salva la diferencia de contratos
 
 El modelo del backend y el de la tienda no coinciden. La traducción está
-aislada en [`src/services/backend-user.ts`](src/services/backend-user.ts) y
-[`src/services/auth.service.ts`](src/services/auth.service.ts):
+aislada en [`src/services/backend-user.ts`](src/services/backend-user.ts),
+[`src/services/backend-catalog.ts`](src/services/backend-catalog.ts) y los
+servicios que los usan:
 
-- El backend guarda `username` (un solo campo, máx. 30) y la UI usa
+- El backend guarda `name` (un solo campo, máx. 50) y la UI usa
   `firstName` / `lastName`: se unen al registrar y se parten al leer.
-- El registro exige `age` y `role_id`. La edad se pide en el formulario; el
-  `role_id` se resuelve consultando `GET /roles`, no con un id quemado.
-- `POST /auth/login` devuelve `{ access_token, Email }` sin datos del usuario y
-  no existe `/auth/me`: el perfil se completa buscando el correo en
-  `GET /users`, y `me()` relee por id con `GET /users/:id`.
+- El registro exige `age`, `gender` (`female` | `male`) y `role_id`. Edad y
+  género se piden en el formulario; el `role_id` sale de
+  `NEXT_PUBLIC_DEFAULT_ROLE_ID` porque `GET /roles` quedó detrás del guard JWT
+  y quien se registra todavía no tiene token. Si la variable está vacía, el
+  front intenta leer `/roles` (solo funciona si se vuelve público).
+- `POST /auth/login` devuelve el token y el usuario, así que la sesión se arma
+  de una sola llamada; `me()` revalida con `GET /auth/profile`.
 - El registro no devuelve token, así que encadena un login automático.
+- El catálogo del backend es un CRUD por id numérico y sin slug, moneda,
+  imagen ni filtros. `backend-catalog.ts` deriva el slug del nombre
+  (`labial-mate-12`, con el id al final para que la URL sea única), fija la
+  moneda en COP y hace en el cliente el filtrado, el orden y la paginación,
+  porque `GET /products` no acepta query params.
 - Los mensajes del backend vienen en inglés (`"Invalid credentials"`); se
   traducen en [`src/lib/api/api-error.ts`](src/lib/api/api-error.ts), junto con
   los arreglos de `class-validator`, que se reparten por campo del formulario.
@@ -68,15 +88,23 @@ absoluta en `NEXT_PUBLIC_API_URL`.
 
 ### Pendientes que dependen del backend
 
-- **El token expira a los 60 segundos** (`expiresIn: '60s'`) y no existe
-  `/auth/refresh`. Por eso el front ignora ese valor al guardar la cookie. Hoy
-  no molesta porque ningún endpoint está protegido, pero cuando lo estén habrá
-  que subir la expiración y exponer el refresh.
-- `GET /users` no carga la relación `role`, así que todas las cuentas se
+- **`role_id` no se guarda.** `UsersService.create()` arma
+  `{ ...userData, role }`, pero la relación en la entidad `User` se llama
+  `roles`, así que TypeORM ignora la propiedad y el usuario queda con
+  `role_id` en `NULL`. El front sí manda el `role_id`; el arreglo es del lado
+  del backend (`roles: role` en `create()` y en `update()`).
+- **El catálogo está detrás del guard JWT** (`@UseGuards(JwtAuthGuard)` en
+  `CategoriesController` y `ProductsController`), pero la vitrina es pública:
+  una visitante sin sesión recibe 401. Mientras eso siga así, el front cae al
+  catálogo simulado y avisa por consola. Lo correcto es dejar públicos los
+  `GET` y proteger solo `POST`/`PATCH`/`DELETE`.
+- Ningún endpoint carga la relación `roles`, así que todas las cuentas se
   muestran como "Clienta".
-- `GET /users` y `GET /users/:id` no exigen autenticación.
-- No existen `/auth/logout` ni `/auth/forgot-password`: el logout es local y la
-  recuperación de contraseña sigue simulada.
+- `GET /products` no acepta filtros, orden ni paginación, y los productos no
+  tienen imagen, slug, SKU ni atributos (acabado, tipo de piel…): los filtros
+  laterales de la categoría no se pueden armar con datos reales.
+- No existe `/auth/refresh`: el token dura 1 h y al vencer se cierra sesión.
+- No existe `/auth/forgot-password`: la recuperación sigue simulada.
 
 ### Cuando el backend esté completo
 

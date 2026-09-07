@@ -13,16 +13,18 @@ export const endpoints = {
     // --- Implementadas en el backend ---
     login: "/auth/login",
     register: "/auth/register",
+    /** Revoca el token (lista negra en el servidor). Requiere Bearer. */
+    logout: "/auth/logout",
+    /** Equivalente a /auth/me: devuelve el usuario del token. */
+    profile: "/auth/profile",
 
     // --- Todavía no existen: las atiende el mock ---
-    logout: "/auth/logout",
     refresh: "/auth/refresh",
-    me: "/auth/me",
     forgotPassword: "/auth/forgot-password",
     resetPassword: "/auth/reset-password",
     social: (provider: string) => `/auth/oauth/${provider}`,
   },
-  /** CRUD real de usuarios y roles (hoy sin autenticación en el backend). */
+  /** CRUD real de usuarios y roles (protegido con JWT, salvo POST /users). */
   users: {
     list: "/users",
     detail: (id: string | number) => `/users/${id}`,
@@ -30,11 +32,16 @@ export const endpoints = {
   roles: {
     list: "/roles",
   },
+  /**
+   * Catálogo real del backend. Son CRUD por id numérico: la tienda navega
+   * por slug, así que la traducción slug <-> id vive en
+   * `src/services/backend-catalog.ts`.
+   */
   catalog: {
-    categories: "/catalog/categories",
-    category: (slug: string) => `/catalog/categories/${slug}`,
-    products: "/catalog/products",
-    product: (slug: string) => `/catalog/products/${slug}`,
+    categories: "/categories",
+    category: (id: string | number) => `/categories/${id}`,
+    products: "/products",
+    product: (id: string | number) => `/products/${id}`,
   },
   tutorials: {
     list: "/tutorials",

@@ -2,11 +2,7 @@ import { ApiError } from "@/lib/api/api-error";
 import { endpoints } from "@/lib/api/endpoints";
 import { http } from "@/lib/api/http";
 import { sessionStore } from "@/lib/auth/session-store";
-import {
-  joinUsername,
-  toUser,
-  type BackendUser,
-} from "@/services/backend-user";
+import { joinName, toUser, type BackendUser } from "@/services/backend-user";
 import type {
   AuthSession,
   ForgotPasswordPayload,
@@ -22,19 +18,21 @@ import type {
  *
  * Lo que el backend ofrece hoy y cómo se cubre la diferencia:
  *
- *   POST /auth/login     -> { access_token, Email }   (sin datos del usuario)
- *   POST /auth/register  -> el usuario creado          (sin token)
- *   GET  /users          -> lista completa, sin password
- *   GET  /roles          -> catálogo de roles
+ *   POST /auth/login     -> { access_token, ...usuario }  (sin la relación rol)
+ *   POST /auth/register  -> { success, message, data }    (sin token)
+ *   POST /auth/logout    -> revoca el token (lista negra)
+ *   GET  /auth/profile   -> usuario del token
+ *   GET  /roles          -> catálogo de roles (protegido con JWT)
  *
- * No existen /auth/me, /auth/logout, /auth/refresh ni /auth/forgot-password.
+ * No existen /auth/refresh ni /auth/forgot-password.
  */
 
-/** Respuesta literal de POST /auth/login. */
-interface BackendLoginResponse {
+/** Respuesta literal de POST /auth/login: el token más el usuario. */
+type BackendLoginResponse = Partial<BackendUser> & {
   access_token: string;
-  Email: string;
-}
+  /** Formato viejo del backend, cuando solo devolvía el correo. */
+  Email?: string;
+};
 
 interface BackendRole {
   id: number;
@@ -44,11 +42,21 @@ interface BackendRole {
 /** Rol que se asigna a quien se registra desde la tienda. */
 const DEFAULT_ROLE_NAME = "user";
 
+/**
+ * Id de rol para el registro público.
+ *
+ * `GET /roles` quedó detrás del guard JWT y quien se registra todavía no
+ * tiene token, así que el id se puede fijar por configuración. Si no está
+ * definida, igual se intenta consultar /roles (funciona si el backend lo
+ * vuelve público o si ya hay sesión abierta).
+ */
+const CONFIGURED_ROLE_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_ROLE_ID);
+
 export const authService = {
   async login(payload: LoginPayload): Promise<AuthSession> {
     const email = payload.email.trim().toLowerCase();
 
-    const { access_token } = await http.post<BackendLoginResponse>(
+    const { access_token, ...profile } = await http.post<BackendLoginResponse>(
       endpoints.auth.login,
       { email, password: payload.password },
       { auth: false },
@@ -57,15 +65,15 @@ export const authService = {
     return {
       accessToken: access_token,
       /**
-       * A propósito sin `expiresIn`: el backend firma los tokens con
-       * expiresIn '60s', y si ese valor llegara a `sessionStore.save` la
-       * cookie moriría en un minuto y la sesión se vería cerrada sola. Se
-       * deja que la cookie use el tiempo por defecto del front (8 h, o 30
-       * días con "recordarme"). Hoy no molesta porque ningún endpoint del
-       * backend está protegido; cuando lo estén, el backend tendrá que
-       * subir la expiración y exponer /auth/refresh.
+       * A propósito sin `expiresIn`: el backend firma con expiresIn '1h' y
+       * no expone /auth/refresh; si ese valor llegara a `sessionStore.save`
+       * la cookie moriría junto con el token y la sesión se vería cerrada
+       * sola. La cookie usa el tiempo por defecto del front (8 h, o 30 días
+       * con "recordarme") y un 401 posterior cierra sesión limpiamente.
        */
-      user: await findUserByEmail(email),
+      user: profile.id
+        ? toUser(profile as BackendUser)
+        : await findUserByEmail(email, access_token),
     };
   },
 
@@ -79,8 +87,9 @@ export const authService = {
     await http.post<BackendUser>(
       endpoints.auth.register,
       {
-        username: joinUsername(payload.firstName, payload.lastName),
+        name: joinName(payload.firstName, payload.lastName),
         age: payload.age,
+        gender: payload.gender,
         email,
         password: payload.password,
         role_id: await resolveDefaultRoleId(),
@@ -92,30 +101,18 @@ export const authService = {
   },
 
   /**
-   * Perfil del usuario autenticado.
-   *
-   * No hay /auth/me, así que se relee el usuario por su id con el CRUD.
-   * Sirve igual para el propósito original: revalidar contra el servidor
-   * que la cuenta sigue existiendo.
+   * Perfil del usuario autenticado: `GET /auth/profile` devuelve el usuario
+   * dueño del token, y de paso confirma que el token sigue vivo (el backend
+   * mantiene una lista negra tras el logout).
    */
   async me(): Promise<User> {
     const cached = sessionStore.getUser();
+    const backendUser = await http.get<BackendUser>(endpoints.auth.profile);
 
-    if (!cached?.id) {
-      throw new ApiError({
-        status: 401,
-        code: "NO_SESSION",
-        message: "Tu sesión no está disponible. Inicia sesión de nuevo.",
-      });
-    }
-
-    const backendUser = await http.get<BackendUser>(
-      endpoints.users.detail(cached.id),
-    );
-
-    // El CRUD no carga la relación `role`; se conserva el que ya se conocía
-    // para no degradar a "customer" a un admin en cada revalidación.
-    return { ...toUser(backendUser), role: cached.role };
+    // El backend no carga la relación `roles` en ningún endpoint; se
+    // conserva el rol ya conocido para no degradar a "customer" a un admin
+    // en cada revalidación.
+    return { ...toUser(backendUser), role: cached?.role ?? "customer" };
   },
 
   forgotPassword(payload: ForgotPasswordPayload) {
@@ -128,11 +125,15 @@ export const authService = {
   },
 
   /**
-   * El backend no expone /auth/logout ni mantiene estado de sesión, así que
-   * cerrar sesión es puramente local: `AuthProvider` borra cookie y caché.
+   * Cierra sesión en el servidor: el token queda en la lista negra, así que
+   * no sirve aunque alguien lo hubiera copiado. Si falla (token ya vencido,
+   * backend caído) no importa: `AuthProvider` borra igual cookie y caché.
    */
-  logout(): Promise<null> {
-    return Promise.resolve(null);
+  async logout(): Promise<null> {
+    await http.post<unknown>(endpoints.auth.logout, undefined, {
+      silentUnauthorized: true,
+    });
+    return null;
   },
 
   /**
@@ -147,21 +148,20 @@ export const authService = {
 };
 
 /**
- * `POST /auth/login` solo devuelve el token y el correo, y no hay endpoint
- * para "el usuario actual", así que el perfil se busca en el listado.
- *
- * Es una consulta de más por login; se acepta porque es la única forma de
- * conocer el id, que la app necesita para todo lo demás. Desaparece en
- * cuanto el login devuelva el usuario o exista /auth/me.
+ * Respaldo por si el login solo devuelve `{ access_token, Email }` (la
+ * versión anterior del backend): el perfil se busca en el listado, usando
+ * el token recién emitido porque /users ya exige autenticación.
  */
-async function findUserByEmail(email: string): Promise<User> {
+async function findUserByEmail(
+  email: string,
+  accessToken: string,
+): Promise<User> {
   const users = await http.get<BackendUser[]>(endpoints.users.list, {
     auth: false,
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  const match = users.find(
-    (user) => user.email?.trim().toLowerCase() === email,
-  );
+  const match = users.find((user) => user.email?.trim().toLowerCase() === email);
 
   if (!match) {
     throw new ApiError({
@@ -176,14 +176,32 @@ async function findUserByEmail(email: string): Promise<User> {
 }
 
 /**
- * El registro exige `role_id` y el formulario no pide rol, así que se
- * resuelve el rol de cliente contra /roles en vez de dejar un id quemado
- * que rompería si cambian los datos de la tabla.
+ * El registro exige `role_id` y el formulario no pide rol.
+ *
+ * Se prefiere NEXT_PUBLIC_DEFAULT_ROLE_ID (el caso normal hoy, porque
+ * /roles pide token) y si no está, se consulta el catálogo de roles en vez
+ * de dejar un id quemado que rompería si cambian los datos de la tabla.
  */
 async function resolveDefaultRoleId(): Promise<number> {
-  const roles = await http.get<BackendRole[]>(endpoints.roles.list, {
-    auth: false,
-  });
+  if (Number.isInteger(CONFIGURED_ROLE_ID) && CONFIGURED_ROLE_ID > 0) {
+    return CONFIGURED_ROLE_ID;
+  }
+
+  let roles: BackendRole[] = [];
+
+  try {
+    roles = await http.get<BackendRole[]>(endpoints.roles.list, {
+      silentUnauthorized: true,
+    });
+  } catch {
+    throw new ApiError({
+      status: 500,
+      code: "ROLE_ID_NOT_CONFIGURED",
+      message:
+        "No pudimos completar el registro: el servidor no permite consultar los roles. " +
+        "Define NEXT_PUBLIC_DEFAULT_ROLE_ID con el id del rol de cliente.",
+    });
+  }
 
   const role =
     roles.find((item) => item.name === DEFAULT_ROLE_NAME) ??

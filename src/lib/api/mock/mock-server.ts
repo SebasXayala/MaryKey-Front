@@ -63,7 +63,7 @@ export async function mockRequest<T>(
     case `POST ${endpoints.auth.forgotPassword}`:
       return { message: "Si el correo existe, enviamos las instrucciones." } as T;
 
-    case `GET ${endpoints.auth.me}`:
+    case `GET ${endpoints.auth.profile}`:
       return demoUser as T;
 
     case `POST ${endpoints.auth.refresh}`:
