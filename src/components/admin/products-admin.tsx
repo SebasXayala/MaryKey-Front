@@ -185,14 +185,13 @@ export function ProductsAdmin() {
         <Select
           aria-label="Filtrar por categoría"
           value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-          options={[
-            { value: "", label: "Todas las categorías" },
-            ...(categories.data ?? []).map((category) => ({
-              value: String(category.id),
-              label: category.name,
-            })),
-          ]}
+          onChange={setCategoryId}
+          placeholder="Todas las categorías"
+          allowEmpty
+          options={(categories.data ?? []).map((category) => ({
+            value: String(category.id),
+            label: category.name,
+          }))}
         />
       </div>
 

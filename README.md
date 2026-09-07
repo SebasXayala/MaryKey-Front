@@ -95,10 +95,10 @@ absoluta en `NEXT_PUBLIC_API_URL`.
   una visitante sin sesión recibe 401. Mientras eso siga así, el front cae al
   catálogo simulado y avisa por consola. Lo correcto es dejar públicos los
   `GET` y proteger solo `POST`/`PATCH`/`DELETE`.
-- Los endpoints de usuarios ya cargan la relación `roles`, así que el rol
-  llega en el login y en `GET /users/:id`. Sigue existiendo
-  `NEXT_PUBLIC_ADMIN_EMAILS` para dar acceso al panel a cuentas que todavía
-  no tengan el rol 'admin' en la base.
+- **El CRUD no distingue roles**: `@UseGuards(JwtAuthGuard)` solo comprueba
+  que el JWT sea válido, así que cualquier cuenta con sesión puede escribir en
+  /products, /categories y /users llamando a la API directamente. El rol solo
+  filtra la interfaz. Falta un guard de rol en el backend.
 - `GET /products` no acepta filtros, orden ni paginación, y los productos no
   tienen imagen, slug, SKU ni atributos (acabado, tipo de piel…): los filtros
   laterales de la categoría no se pueden armar con datos reales.
@@ -139,11 +139,10 @@ Habla directo con el CRUD del backend (modelo crudo: ids numéricos,
 
 **Quién entra:** el `middleware` exige sesión y
 [`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) decide quién
-administra: entra quien tenga el rol `admin` en el backend. Para cuentas que
-todavía no lo tengan, `NEXT_PUBLIC_ADMIN_EMAILS` (correos separados por coma)
-abre la puerta; si se deja vacía, el panel queda abierto a cualquier sesión
-iniciada. El acceso aparece en el menú
-de la cuenta, en el header.
+administra: entra únicamente quien tenga el rol `admin` en el backend. El rol
+llega cargado en `POST /auth/login` y se revalida en cada `GET /users/:id`;
+se asigna desde la pantalla de Clientes. El acceso aparece en el menú de la
+cuenta, en el header.
 
 No se crean cuentas desde el panel a propósito: `POST /users` guardaría la
 contraseña en texto plano, mientras que `POST /auth/register` la cifra.

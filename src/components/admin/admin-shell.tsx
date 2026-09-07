@@ -59,8 +59,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6 text-center">
         <h1 className="text-2xl text-neutral-700">Zona restringida</h1>
         <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-          Tu cuenta no tiene permisos de administración. Si deberías tenerlos,
-          pide que agreguen tu correo a la lista del panel.
+          Tu cuenta no tiene el rol de administradora. Si deberías tenerlo,
+          pide que te lo asignen desde la gestión de clientes.
         </p>
         <Link
           href="/"

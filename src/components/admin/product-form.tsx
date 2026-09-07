@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ export function ProductForm({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setError,
@@ -176,15 +177,22 @@ export function ProductForm({
           />
         </div>
 
-        <Select
-          label="Categoría"
-          placeholder="Selecciona…"
-          options={categories.map((category) => ({
-            value: String(category.id),
-            label: category.name,
-          }))}
-          error={errors.category_id?.message}
-          {...register("category_id")}
+        <Controller
+          control={control}
+          name="category_id"
+          render={({ field }) => (
+            <Select
+              label="Categoría"
+              options={categories.map((category) => ({
+                value: String(category.id),
+                label: category.name,
+              }))}
+              value={field.value ? String(field.value) : ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.category_id?.message}
+            />
+          )}
         />
 
         <Checkbox

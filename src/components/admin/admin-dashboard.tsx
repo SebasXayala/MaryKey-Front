@@ -12,8 +12,6 @@ import {
 import Link from "next/link";
 
 import { DataTable, type Column } from "@/components/admin/data-table";
-import { Alert } from "@/components/ui/alert";
-import { IS_ADMIN_OPEN } from "@/lib/auth/permissions";
 import { queryKeys } from "@/lib/query-keys";
 import { formatPrice } from "@/lib/utils/format";
 import {
@@ -119,14 +117,6 @@ export function AdminDashboard() {
           Estado del catálogo y de las cuentas de la tienda.
         </p>
       </div>
-
-      {IS_ADMIN_OPEN && (
-        <Alert tone="info" className="mb-6">
-          El panel está abierto a cualquier sesión iniciada. Para limitarlo,
-          define <strong>NEXT_PUBLIC_ADMIN_EMAILS</strong> con los correos de
-          las administradoras.
-        </Alert>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (

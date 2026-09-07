@@ -5,7 +5,7 @@ import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ export function RegisterForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -102,15 +103,22 @@ export function RegisterForm() {
             {...register("age")}
           />
           {/* El backend lo exige como enum ('female' | 'male'). */}
-          <Select
-            label="Género"
-            placeholder="Selecciona…"
-            options={[
-              { value: "female", label: "Femenino" },
-              { value: "male", label: "Masculino" },
-            ]}
-            error={errors.gender?.message}
-            {...register("gender")}
+          <Controller
+            control={control}
+            name="gender"
+            render={({ field }) => (
+              <Select
+                label="Género"
+                options={[
+                  { value: "female", label: "Femenino" },
+                  { value: "male", label: "Masculino" },
+                ]}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={errors.gender?.message}
+              />
+            )}
           />
         </div>
 

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ export function CustomerForm({ isOpen, onClose, customer }: CustomerFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setError,
@@ -154,14 +155,22 @@ export function CustomerForm({ isOpen, onClose, customer }: CustomerFormProps) {
             error={errors.age?.message}
             {...register("age")}
           />
-          <Select
-            label="Género"
-            options={[
-              { value: "female", label: "Femenino" },
-              { value: "male", label: "Masculino" },
-            ]}
-            error={errors.gender?.message}
-            {...register("gender")}
+          <Controller
+            control={control}
+            name="gender"
+            render={({ field }) => (
+              <Select
+                label="Género"
+                options={[
+                  { value: "female", label: "Femenino" },
+                  { value: "male", label: "Masculino" },
+                ]}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={errors.gender?.message}
+              />
+            )}
           />
         </div>
 
@@ -172,17 +181,25 @@ export function CustomerForm({ isOpen, onClose, customer }: CustomerFormProps) {
           {...register("email")}
         />
 
-        <Select
-          label="Rol"
-          placeholder={roles.isPending ? "Cargando…" : "Sin cambios"}
-          allowEmpty
-          hint="Define los permisos de la cuenta. Se aplica en su próxima sesión."
-          options={(roles.data ?? []).map((role) => ({
-            value: String(role.id),
-            label: role.name,
-          }))}
-          error={errors.role_id?.message}
-          {...register("role_id")}
+        <Controller
+          control={control}
+          name="role_id"
+          render={({ field }) => (
+            <Select
+              label="Rol"
+              placeholder={roles.isPending ? "Cargando…" : "Sin cambios"}
+              allowEmpty
+              hint="Define los permisos de la cuenta. Se aplica en su próxima sesión."
+              options={(roles.data ?? []).map((role) => ({
+                value: String(role.id),
+                label: role.name,
+              }))}
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.role_id?.message}
+            />
+          )}
         />
       </form>
     </Modal>
