@@ -4,10 +4,14 @@ import type { NextConfig } from "next";
  * Origen del backend Nest. Se lee solo en el servidor (por eso no lleva el
  * prefijo NEXT_PUBLIC_): el navegador nunca habla directo con él.
  */
-const BACKEND_URL = (process.env.BACKEND_URL ?? "http://localhost:4000").replace(
-  /\/+$/,
-  "",
-);
+const BACKEND_URL = (process.env.BACKEND_URL ?? "http://localhost:4000")
+  .replace(/\/+$/, "")
+  /**
+   * El rewrite ya agrega el prefijo del API, así que si la variable lo trae
+   * ("http://localhost:4000/api/v1") se quita: de lo contrario las llamadas
+   * salen a /api/v1/api/v1/... y el backend responde 404.
+   */
+  .replace(/\/api\/v1$/, "");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
