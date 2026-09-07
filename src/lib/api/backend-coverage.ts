@@ -12,7 +12,6 @@
  *   POST   /auth/login      -> { access_token, ...usuario }   (público)
  *   POST   /auth/register    -> { success, message, data }     (público)
  *   POST   /auth/logout      -> revoca el token               (JWT)
- *   GET    /auth/profile     -> usuario del token             (JWT)
  *   POST   /users            -> crea usuario                  (público)
  *   GET|PATCH|DELETE /users  -> CRUD                          (JWT)
  *   GET|POST|PATCH|DELETE /roles       -> CRUD                (JWT)
@@ -23,7 +22,6 @@ const IMPLEMENTED_PREFIXES = [
   "/auth/login",
   "/auth/register",
   "/auth/logout",
-  "/auth/profile",
   "/users",
   "/roles",
   "/categories",

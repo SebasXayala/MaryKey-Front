@@ -21,7 +21,7 @@ import type {
  *   POST /auth/login     -> { access_token, ...usuario }  (sin la relación rol)
  *   POST /auth/register  -> { success, message, data }    (sin token)
  *   POST /auth/logout    -> revoca el token (lista negra)
- *   GET  /auth/profile   -> usuario del token
+ *   GET  /users/:id      -> perfil (no hay /auth/me ni /auth/profile)
  *   GET  /roles          -> catálogo de roles (protegido con JWT)
  *
  * No existen /auth/refresh ni /auth/forgot-password.
@@ -101,18 +101,32 @@ export const authService = {
   },
 
   /**
-   * Perfil del usuario autenticado: `GET /auth/profile` devuelve el usuario
-   * dueño del token, y de paso confirma que el token sigue vivo (el backend
-   * mantiene una lista negra tras el logout).
+   * Perfil del usuario autenticado.
+   *
+   * El backend quitó `GET /auth/profile`, así que se relee por id con el
+   * CRUD. Cumple el mismo propósito: confirma contra el servidor que la
+   * cuenta sigue existiendo y que el token sigue vivo (hay lista negra tras
+   * el logout).
    */
   async me(): Promise<User> {
     const cached = sessionStore.getUser();
-    const backendUser = await http.get<BackendUser>(endpoints.auth.profile);
+
+    if (!cached?.id) {
+      throw new ApiError({
+        status: 401,
+        code: "NO_SESSION",
+        message: "Tu sesión no está disponible. Inicia sesión de nuevo.",
+      });
+    }
+
+    const backendUser = await http.get<BackendUser>(
+      endpoints.users.detail(cached.id),
+    );
 
     // El backend no carga la relación `roles` en ningún endpoint; se
     // conserva el rol ya conocido para no degradar a "customer" a un admin
     // en cada revalidación.
-    return { ...toUser(backendUser), role: cached?.role ?? "customer" };
+    return { ...toUser(backendUser), role: cached.role };
   },
 
   forgotPassword(payload: ForgotPasswordPayload) {

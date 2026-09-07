@@ -42,7 +42,7 @@ contraseña. En vez de apagar los mocks de golpe —lo que dejaría media tienda
 | Zona | Origen | Endpoints |
 | --- | --- | --- |
 | Login y registro | **Backend real** | `POST /auth/login`, `POST /auth/register` |
-| Sesión | **Backend real** | `GET /auth/profile`, `POST /auth/logout` |
+| Sesión | **Backend real** | `POST /auth/logout` |
 | Perfil de la cuenta | **Backend real** | `GET /users/:id`, `GET /roles` |
 | Catálogo | **Backend real** | `GET /categories`, `GET /products`, `GET /products/:id` |
 | Tutoriales y newsletter | Simulado | pendientes en el API |
@@ -66,7 +66,9 @@ servicios que los usan:
   y quien se registra todavía no tiene token. Si la variable está vacía, el
   front intenta leer `/roles` (solo funciona si se vuelve público).
 - `POST /auth/login` devuelve el token y el usuario, así que la sesión se arma
-  de una sola llamada; `me()` revalida con `GET /auth/profile`.
+  de una sola llamada. No hay endpoint de "usuario actual" (`/auth/profile`
+  se agregó y se quitó el mismo día), así que `me()` relee por id con
+  `GET /users/:id`.
 - El registro no devuelve token, así que encadena un login automático.
 - El catálogo del backend es un CRUD por id numérico y sin slug, moneda,
   imagen ni filtros. `backend-catalog.ts` deriva el slug del nombre

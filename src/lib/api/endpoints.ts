@@ -15,10 +15,13 @@ export const endpoints = {
     register: "/auth/register",
     /** Revoca el token (lista negra en el servidor). Requiere Bearer. */
     logout: "/auth/logout",
-    /** Equivalente a /auth/me: devuelve el usuario del token. */
-    profile: "/auth/profile",
 
     // --- Todavía no existen: las atiende el mock ---
+    /**
+     * No hay "usuario actual": /auth/profile se agregó y se quitó el mismo
+     * día (commit 563bdcb del backend), así que el perfil se relee con
+     * `GET /users/:id` a partir del id guardado en la sesión.
+     */
     refresh: "/auth/refresh",
     forgotPassword: "/auth/forgot-password",
     resetPassword: "/auth/reset-password",
