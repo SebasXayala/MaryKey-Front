@@ -16,8 +16,8 @@ export interface BackendUser {
   gender?: Gender | null;
   email: string;
   /**
-   * La relación se llama `roles` en la entidad (ManyToOne a Role). Solo
-   * llega si el backend la cargó, y hoy ningún endpoint lo hace.
+   * La relación se llama `roles` en la entidad (ManyToOne a Role). Los
+   * endpoints de usuarios y el login la cargan; el catálogo no la usa.
    */
   roles?: { id: number; name: string } | null;
   createdAt?: string;
@@ -43,8 +43,7 @@ export function joinName(firstName: string, lastName: string): string {
 
 /**
  * Los roles del backend ('admin', 'user', …) no coinciden con la unión que
- * usa la UI. Además ningún endpoint carga la relación, así que en la
- * práctica casi siempre cae en "customer".
+ * usa la UI. Si la relación no viene cargada, cae en "customer".
  */
 function mapRole(name?: string | null): User["role"] {
   if (name === "admin") return "admin";

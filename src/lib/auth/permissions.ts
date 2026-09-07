@@ -3,10 +3,10 @@ import type { User } from "@/types/auth";
 /**
  * Quién entra al panel de administración.
  *
- * El backend todavía no distingue roles: ningún endpoint carga la relación
- * `roles`, así que `user.role` casi siempre llega como "customer" aunque la
- * cuenta sea de administradora. Mientras tanto la lista blanca de correos
- * (NEXT_PUBLIC_ADMIN_EMAILS) permite cerrar el panel sin esperar al API.
+ * Entra quien tenga el rol 'admin' en el backend (login y `GET /users/:id`
+ * ya devuelven la relación `roles`). La lista blanca de correos
+ * (NEXT_PUBLIC_ADMIN_EMAILS) sirve para dar acceso a cuentas que todavía no
+ * tienen ese rol asignado en la base.
  *
  * Si la variable está vacía, el panel queda abierto a cualquier sesión
  * iniciada: es un entorno de desarrollo, no una barrera de seguridad. La

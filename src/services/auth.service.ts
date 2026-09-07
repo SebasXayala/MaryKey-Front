@@ -122,11 +122,15 @@ export const authService = {
     const backendUser = await http.get<BackendUser>(
       endpoints.users.detail(cached.id),
     );
+    const fresh = toUser(backendUser);
 
-    // El backend no carga la relación `roles` en ningún endpoint; se
-    // conserva el rol ya conocido para no degradar a "customer" a un admin
-    // en cada revalidación.
-    return { ...toUser(backendUser), role: cached.role };
+    // Si la respuesta trae la relación `roles`, manda el rol del servidor;
+    // si no llegara, se conserva el conocido para no degradar a "customer"
+    // a una administradora en cada revalidación.
+    return {
+      ...fresh,
+      role: backendUser.roles ? fresh.role : cached.role,
+    };
   },
 
   forgotPassword(payload: ForgotPasswordPayload) {

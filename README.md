@@ -90,19 +90,15 @@ absoluta en `NEXT_PUBLIC_API_URL`.
 
 ### Pendientes que dependen del backend
 
-- **`role_id` no se guarda.** `UsersService.create()` arma
-  `{ ...userData, role }`, pero la relación en la entidad `User` se llama
-  `roles`, así que TypeORM ignora la propiedad y el usuario queda con
-  `role_id` en `NULL`. El front sí manda el `role_id`; el arreglo es del lado
-  del backend (`roles: role` en `create()` y en `update()`).
 - **El catálogo está detrás del guard JWT** (`@UseGuards(JwtAuthGuard)` en
   `CategoriesController` y `ProductsController`), pero la vitrina es pública:
   una visitante sin sesión recibe 401. Mientras eso siga así, el front cae al
   catálogo simulado y avisa por consola. Lo correcto es dejar públicos los
   `GET` y proteger solo `POST`/`PATCH`/`DELETE`.
-- Ningún endpoint carga la relación `roles`, así que todas las cuentas se
-  muestran como "Clienta" y el panel no puede filtrar por rol. Es también la
-  razón de `NEXT_PUBLIC_ADMIN_EMAILS`.
+- Los endpoints de usuarios ya cargan la relación `roles`, así que el rol
+  llega en el login y en `GET /users/:id`. Sigue existiendo
+  `NEXT_PUBLIC_ADMIN_EMAILS` para dar acceso al panel a cuentas que todavía
+  no tengan el rol 'admin' en la base.
 - `GET /products` no acepta filtros, orden ni paginación, y los productos no
   tienen imagen, slug, SKU ni atributos (acabado, tipo de piel…): los filtros
   laterales de la categoría no se pueden armar con datos reales.
@@ -143,9 +139,10 @@ Habla directo con el CRUD del backend (modelo crudo: ids numéricos,
 
 **Quién entra:** el `middleware` exige sesión y
 [`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) decide quién
-administra. Como el backend no expone el rol, la lista blanca vive en
-`NEXT_PUBLIC_ADMIN_EMAILS` (correos separados por coma); si se deja vacía el
-panel queda abierto a cualquier sesión iniciada. El acceso aparece en el menú
+administra: entra quien tenga el rol `admin` en el backend. Para cuentas que
+todavía no lo tengan, `NEXT_PUBLIC_ADMIN_EMAILS` (correos separados por coma)
+abre la puerta; si se deja vacía, el panel queda abierto a cualquier sesión
+iniciada. El acceso aparece en el menú
 de la cuenta, en el header.
 
 No se crean cuentas desde el panel a propósito: `POST /users` guardaría la

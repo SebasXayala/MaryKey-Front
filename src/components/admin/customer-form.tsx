@@ -176,7 +176,7 @@ export function CustomerForm({ isOpen, onClose, customer }: CustomerFormProps) {
           label="Rol"
           placeholder={roles.isPending ? "Cargando…" : "Sin cambios"}
           allowEmpty
-          hint="El backend todavía no guarda esta relación (usa `role` en vez de `roles` al grabar), así que el cambio no se persiste."
+          hint="Define los permisos de la cuenta. Se aplica en su próxima sesión."
           options={(roles.data ?? []).map((role) => ({
             value: String(role.id),
             label: role.name,
