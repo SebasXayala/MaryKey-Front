@@ -99,7 +99,8 @@ absoluta en `NEXT_PUBLIC_API_URL`.
   catálogo simulado y avisa por consola. Lo correcto es dejar públicos los
   `GET` y proteger solo `POST`/`PATCH`/`DELETE`.
 - Ningún endpoint carga la relación `roles`, así que todas las cuentas se
-  muestran como "Clienta".
+  muestran como "Clienta" y el panel no puede filtrar por rol. Es también la
+  razón de `NEXT_PUBLIC_ADMIN_EMAILS`.
 - `GET /products` no acepta filtros, orden ni paginación, y los productos no
   tienen imagen, slug, SKU ni atributos (acabado, tipo de piel…): los filtros
   laterales de la categoría no se pueden armar con datos reales.
@@ -125,6 +126,29 @@ Nada más cambia: componentes, formularios y pantallas no conocen ninguna URL.
 
 ---
 
+## Panel de administración (`/admin`)
+
+Zona privada para gestionar el catálogo y ver las cuentas registradas.
+Habla directo con el CRUD del backend (modelo crudo: ids numéricos,
+`category_id`, `isActive`), sin pasar por el adaptador de la tienda.
+
+| Pantalla | Qué hace | Endpoints |
+| --- | --- | --- |
+| Resumen | Totales, valor del inventario y productos por reponer | `GET /products`, `/categories`, `/users` |
+| Productos | Crear, editar, eliminar; búsqueda y filtro por categoría | `POST/PATCH/DELETE /products` |
+| Categorías | Crear, editar, eliminar; cuenta de productos por categoría | `POST/PATCH/DELETE /categories` |
+| Clientes | Buscar, editar datos y eliminar cuentas | `GET/PATCH/DELETE /users`, `GET /roles` |
+
+**Quién entra:** el `middleware` exige sesión y
+[`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) decide quién
+administra. Como el backend no expone el rol, la lista blanca vive en
+`NEXT_PUBLIC_ADMIN_EMAILS` (correos separados por coma); si se deja vacía el
+panel queda abierto a cualquier sesión iniciada. El acceso aparece en el menú
+de la cuenta, en el header.
+
+No se crean cuentas desde el panel a propósito: `POST /users` guardaría la
+contraseña en texto plano, mientras que `POST /auth/register` la cifra.
+
 ## Estructura
 
 ```
@@ -142,17 +166,24 @@ src/
       buscar/               resultados de búsqueda
       cuenta/               privada (protegida por middleware + RequireAuth)
       carrito/              bolsa de compras
+    admin/                  panel privado (sin header de tienda)
+      page.tsx              resumen
+      productos/            CRUD de productos
+      categorias/           CRUD de categorías
+      clientes/             cuentas registradas
     layout.tsx              fuentes, metadata, providers
     providers.tsx           React Query + Auth + Cart + Wishlist
     error.tsx, not-found.tsx
   components/
-    ui/                     design system: Button, Input, Checkbox, Alert, Logo
+    ui/                     design system: Button, Input, Select, Textarea,
+                            Checkbox, Modal, Alert, Logo
     layout/                 SiteHeader, SiteFooter
     auth/                   LoginForm, RegisterForm, AuthHero, RequireAuth
     catalog/                ProductCard, FeaturedCarousel, CatalogFilters,
                             CategoryCatalog, CategoryHero, Pagination
     tutorials/              TutorialHero, FeaturedTutorial, TutorialExplorer,
                             TutorialCard, NewsletterCta
+    admin/                  AdminShell, DataTable, formularios y ConfirmDialog
   lib/
     api/
       config.ts             variables de entorno
@@ -163,10 +194,12 @@ src/
     auth/
       auth-context.tsx      sesión, login, logout, refresh
       session-store.ts      persistencia en cookie + localStorage
+      permissions.ts        quién entra al panel de administración
     cart/                   bolsa de compras
     wishlist/               favoritos
     validation/             esquemas Zod de formularios
-  services/                 auth, catalog, tutorials, newsletter
+  services/                 auth, catalog, admin, tutorials, newsletter
+                            backend-user.ts / backend-catalog.ts: adaptadores
   types/                    contratos del dominio
   middleware.ts             protección de rutas en el servidor
 ```

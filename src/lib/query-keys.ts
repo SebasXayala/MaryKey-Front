@@ -12,4 +12,12 @@ export const queryKeys = {
   tutorial: (slug: string) => ["tutorials", "detail", slug] as const,
   featuredTutorial: ["tutorials", "featured"] as const,
   tutorialTopics: ["tutorials", "topics"] as const,
+
+  /** Panel de administración: datos crudos del backend, sin adaptar. */
+  admin: {
+    products: ["admin", "products"] as const,
+    categories: ["admin", "categories"] as const,
+    customers: ["admin", "customers"] as const,
+    roles: ["admin", "roles"] as const,
+  },
 };

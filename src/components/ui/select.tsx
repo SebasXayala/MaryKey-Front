@@ -17,11 +17,26 @@ export interface SelectProps
   options: SelectOption[];
   /** Opción vacía inicial, ej. "Selecciona…". */
   placeholder?: string;
+  /** Deja elegible la opción vacía (filtros, campos opcionales). */
+  allowEmpty?: boolean;
 }
 
 /** Mismo lenguaje visual que <Input>, para formularios mixtos. */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, hint, options, placeholder, className, id, ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      hint,
+      options,
+      placeholder,
+      allowEmpty = false,
+      className,
+      id,
+      ...props
+    },
+    ref,
+  ) => {
     const generatedId = useId();
     const selectId = id ?? generatedId;
     const describedBy = error
@@ -54,7 +69,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {...props}
         >
           {placeholder && (
-            <option value="" disabled>
+            <option value="" disabled={!allowEmpty}>
               {placeholder}
             </option>
           )}

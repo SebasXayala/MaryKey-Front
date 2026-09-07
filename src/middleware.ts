@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Rutas que exigen sesión activa. */
-const PROTECTED_ROUTES = ["/cuenta", "/pedidos"];
+const PROTECTED_ROUTES = ["/cuenta", "/pedidos", "/admin"];
 
 /** Rutas que un usuario ya autenticado no debería volver a ver. */
 const GUEST_ONLY_ROUTES = ["/login", "/registro"];

@@ -1,11 +1,12 @@
 "use client";
 
-import { LogOut, User, UserPlus } from "lucide-react";
+import { LayoutDashboard, LogOut, User, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
+import { canAccessAdmin } from "@/lib/auth/permissions";
 import { useClickOutside } from "@/lib/hooks/use-click-outside";
 import { initials } from "@/lib/utils/format";
 
@@ -67,6 +68,18 @@ export function AccountMenu() {
                 <User className="size-4" />
                 Mi cuenta
               </Link>
+
+              {canAccessAdmin(user) && (
+                <Link
+                  href="/admin"
+                  role="menuitem"
+                  onClick={close}
+                  className="flex items-center gap-2.5 rounded-field px-3 py-2.5 text-sm text-neutral-600 hover:bg-primary-50 hover:text-primary-700"
+                >
+                  <LayoutDashboard className="size-4" />
+                  Panel de administración
+                </Link>
+              )}
 
               <button
                 type="button"
