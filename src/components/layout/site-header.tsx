@@ -12,15 +12,6 @@ import { Logo } from "@/components/ui/logo";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils/cn";
 import { catalogService } from "@/services/catalog.service";
-import type { Category } from "@/types/catalog";
-
-/** Se usa mientras responde el backend, para que el header no salte. */
-const FALLBACK_NAV: Category[] = [
-  { id: "1", slug: "skincare", name: "Skincare" },
-  { id: "2", slug: "maquillaje", name: "Maquillaje" },
-  { id: "3", slug: "fragancias", name: "Fragancias" },
-];
-
 /** Tutoriales es contenido editorial, no una categoría del catálogo. */
 const CONTENT_LINKS = [{ id: "tutoriales", href: "/tutoriales", name: "Tutoriales" }];
 
@@ -30,7 +21,11 @@ export function SiteHeader() {
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // La navegación viene del catálogo real; si falla, se muestra el fallback.
+  /**
+   * El menú son las categorías que existan en el backend, ni una más: si
+   * todavía no responde, solo se muestra Tutoriales, en vez de nombres
+   * inventados que llevarían a páginas vacías.
+   */
   const { data: categories } = useQuery({
     queryKey: queryKeys.categories,
     queryFn: () => catalogService.categories(),
@@ -38,7 +33,7 @@ export function SiteHeader() {
   });
 
   const navItems = [
-    ...(categories?.length ? categories : FALLBACK_NAV).map((item) => ({
+    ...(categories ?? []).map((item) => ({
       id: item.id,
       name: item.name,
       href: `/categoria/${item.slug}`,
