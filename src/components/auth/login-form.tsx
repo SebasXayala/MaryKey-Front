@@ -15,6 +15,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { ApiError, toDisplayMessage } from "@/lib/api/api-error";
 import { useAuth } from "@/lib/auth/auth-context";
+import { canAccessAdmin } from "@/lib/auth/permissions";
 import {
   loginSchema,
   type LoginFormValues,
@@ -26,7 +27,8 @@ export function LoginForm() {
   const { login } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const redirectTo = searchParams.get("next") ?? "/cuenta";
+  /** Si venía de una ruta protegida se respeta; si no, decide el rol. */
+  const requestedNext = searchParams.get("next");
 
   const {
     register,
@@ -41,8 +43,10 @@ export function LoginForm() {
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     try {
-      await login(values);
-      router.replace(redirectTo);
+      const user = await login(values);
+      router.replace(
+        requestedNext ?? (canAccessAdmin(user) ? "/admin" : "/cuenta"),
+      );
       router.refresh();
     } catch (error) {
       // Errores por campo que devuelva el backend se pintan en el campo.
@@ -112,7 +116,7 @@ export function LoginForm() {
         <span className="h-px flex-1 bg-line" />
       </div>
 
-      <SocialAuthButtons redirectTo={redirectTo} />
+      <SocialAuthButtons redirectTo={requestedNext ?? "/cuenta"} />
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         ¿Eres nueva aquí?{" "}

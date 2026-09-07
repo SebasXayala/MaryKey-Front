@@ -1,8 +1,7 @@
-import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 
 import { FeaturedCarousel } from "@/components/catalog/featured-carousel";
-import { ButtonLink } from "@/components/ui/button";
+import { HeroActions } from "@/components/home/hero-actions";
 
 export const metadata: Metadata = {
   title: "Inicio",
@@ -22,15 +21,7 @@ export default function HomePage() {
               Empoderando a las mujeres a través de la belleza y la oportunidad
               durante más de 60 años.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href="/categoria/skincare" size="lg">
-                Ver Skincare
-                <ArrowRight className="size-4" />
-              </ButtonLink>
-              <ButtonLink href="/registro" size="lg" variant="outlined">
-                Crear cuenta
-              </ButtonLink>
-            </div>
+            <HeroActions />
           </div>
 
           <div

@@ -1,10 +1,11 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LayoutDashboard, LogOut } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
+import { canAccessAdmin } from "@/lib/auth/permissions";
 import { initials } from "@/lib/utils/format";
 
 const roleLabels: Record<string, string> = {
@@ -35,6 +36,13 @@ export function AccountPanel() {
             {roleLabels[user.role] ?? user.role}
           </span>
         </div>
+
+        {canAccessAdmin(user) && (
+          <ButtonLink href="/admin">
+            <LayoutDashboard className="size-4" />
+            Ir al panel
+          </ButtonLink>
+        )}
 
         <Button
           variant="outlined"
